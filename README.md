@@ -1,100 +1,94 @@
-# Cold Email Automation Framework (Google Workspace)
-
-This repository details a lightweight, high-performance execution engine built entirely within **Google Apps Script** and the **Gemini API** free tier. It converts static rows of potential leads into deeply contextualized, human-written emails directly within your Gmail Drafts folder.
-
-The pipeline uses the **Cold Mail Mastery Framework**—combining extreme structural brevity with hyper-targeted company observation anchors.
+Here is the complete, fully updated `README.md` for your repository. It includes the latest architectural changes, the UI-driven checkbox system, and the decoupled JSON context configuration.
 
 ---
 
-## 📋 Features
+# 🚀 Cold Email Automation Engine (Google Workspace)
 
-* **Zero-Cost Operation:** Runs on Google Apps Script (free) and Gemini 2.5 Flash API (free tier).
+This repository contains a lightweight, high-performance cold email execution engine built entirely within **Google Apps Script** and the **Gemini API** (free tier). It converts static rows of potential leads into deeply contextualized, human-written emails drafted directly into your Gmail Drafts folder.
+
+The pipeline executes the **Cold Mail Mastery Framework**—combining extreme structural brevity with hyper-targeted company observation anchors and strict anti-AI lexical filters.
+
+---
+
+## ✨ Features
+
+* **Zero-Cost Operation:** Runs entirely on Google Apps Script (free) and the Gemini 2.5 Flash API (free tier).
+* **Decoupled Profile Context:** Your resume data is isolated in a separate `Resume.json` file. Update your projects once, and the engine automatically parses the newest data.
+* **UI-Driven Control System:** No need to run bulk scripts blindly. Tick checkboxes next to specific companies in your Google Sheet and click the custom top-menu button to process only those rows.
 * **Anti-AI Detection Filter:** Hardcoded lexical constraints strip out robotic phrases (e.g., *"hope this email finds you well"*, *"esteemed organization"*).
+* **Dynamic Hook Integration:** Evaluates the company's industry and operational description to draft a unique opening observation.
+* **Human-in-the-Loop Safeguard:** Pushes outputs to your **Gmail Drafts folder**, allowing you to maintain final editorial control and attach your resume manually before sending.
 
+---
 
-* **Dynamic Hook Integration:** Evaluates the company's industry and operational description to draft a unique observation.
+## 🗂️ Project Modular Architecture
 
+The repository environment structure inside the Apps Script workspace follows a decoupled architecture pattern:
 
-* **Selective Context Matching:** Picks a single, highly relevant technical asset from your background rather than executing a generic resume dump.
+```text
+├── Code.gs             # Runtime engine logic, framework rules, API calls, and UI menus
+└── Resume.json.html    # Profile database layer containing structured JSON object properties
 
+```
 
-* **Human-in-the-Loop Safeguard:** Pushes outputs to your **Gmail Drafts folder** so you maintain final editorial control and manually attach files before sending.
+To modify your background experiences or projects over time, update the `technical_pillars` values inside the `Resume.json` file. The core execution engine naturally updates its content parsing automatically upon the next trigger.
 
 ---
 
 ## 🛠️ Google Sheets Data Structure
 
-To ensure the execution script matches your data indices flawlessly, verify your Google Sheet contains these exact columns starting at **Column A (Index 0)**:
+To ensure the execution script matches your data indices flawlessly, verify your Google Sheet contains these exact columns starting at **Column A**:
 
 | Column | Header Name | Description |
 | --- | --- | --- |
 | **A** | `SNo` | Serial Number. |
-| **B** | `Name` | Recruiter or Executive's First/Last Name.
-
- |
+| **B** | `Name` | Recruiter or Executive's First/Last Name. |
 | **C** | `Email` | Direct professional email address. |
-| **D** | `Title` | Recruiter / Executive Job Title.
-
- |
-| **E** | `Company` | Registered name of the company.
-
- |
+| **D** | `Title` | Recruiter / Executive Job Title. |
+| **E** | `Company` | Registered name of the company. |
 | **F** | `Website` | Link to the corporate domain. |
 | **G** | `Industry` | Vertical market categorization (e.g., SaaS, FinTech). |
 | **H** | `Company Description` | Raw text detailing what the company builds or services. |
-| **I** | `Status` | **(Crucial Setup)** Type `Status` in cell **I1**. Used by the engine to track and skip processed rows. |
+| **I** | `Status` | **(Crucial Setup)** Used by the engine to track and skip processed rows (marks as "Drafted"). |
+| **J** | `Draft Now` | **(Crucial Setup)** Insert **Checkboxes** here (`Insert > Checkbox`). Tick these to select rows for processing. |
 
 ---
 
-## 🚀 Execution Guide
+## 🚀 Execution & Setup Guide
 
 ### Step 1: Obtain a Free Gemini API Key
 
 1. Navigate to [Google AI Studio](https://aistudio.google.com/).
 2. Log in with your standard Google Account.
-3. Click **"Get API Key"** in the sidebar.
-4. Click **"Create API Key"**, copy the generated alphanumeric string, and save it securely.
+3. Click **"Get API Key"** in the sidebar, create a new key, and save it securely.
 
-### Step 2: Inject the Script into Google Sheets
+### Step 2: Inject the Code into Google Sheets
 
-1. Open your master outreach Google Sheet containing the 1,800 contacts.
-2. In the top navigation menu, go to **Extensions** > **Apps Script**.
-3. Clear out any placeholder code inside the script workspace editor (`Code.gs`).
-4. Paste the complete script provided in the main discussion body above.
-5. Replace the variable `YOUR_GEMINI_API_KEY_HERE` on line 2 with your actual key copied in Step 1.
-6. Click the **Save (Disk icon)** button.
+1. Open your master outreach Google Sheet.
+2. Go to **Extensions** > **Apps Script**.
+3. Clear out any placeholder code inside the `Code.gs` file and paste the `Code.gs` provided in this repository.
+4. Replace the variable `YOUR_GEMINI_API_KEY_HERE` at the top of the script with your actual key.
+5. In the left panel, click the **`+` (Add a file)** icon and select **HTML**. Name it exactly **`Resume.json`**.
+6. Paste your JSON profile context into `Resume.json.html` and click **Save**.
 
-### Step 3: Run the Engine & Authorize Permissions
+### Step 3: Run the Engine & Authorize
 
-1. Click the **Run** button (the play triangle) in the top toolbar of the Apps Script workspace.
-2. An **"Authorization Required"** window will pop up. This happens because the script needs local permissions to write text into your Google Sheet cells and generate items within your Gmail drafts.
-3. Click **Review Permissions**, select your Google Account, click **Advanced** (at the bottom), and choose **Go to Untitled project (unsafe)**.
-4. Review the permissions list and click **Allow**.
+1. Refresh your Google Sheet in your web browser.
+2. A new custom menu called **`🚀 Cold Email Engine`** will appear in the top toolbar.
+3. The first time you run it, Google will prompt an **"Authorization Required"** window. Click **Review Permissions** > select your account > **Advanced** > **Go to Untitled project (unsafe)** > **Allow**.
 
 ---
 
-## 🚦 Best Practices & Operation Lifecycle
+## 🚦 Daily Operation Workflow
 
 ```
-[ Google Sheet Row ] ──> [ Apps Script + Gemini API ] ──> [ Your Gmail Drafts Folder ]
-                                                                   │
-                                                           (You review & hit send)
+[ Tick Checkboxes ] ──> [ Click Custom Menu ] ──> [ Gmail Drafts Folder ]
+                                                           │
+                                                (Review, Attach PDF, Send)
 
 ```
 
-### 1. The Safety Test Run
-
-Do not batch process 100s of records on your first click. Create a temporary row in your sheet with **your personal email address** and a sample company description. Highlight or filter to run only that row. Verify that your Gmail Drafts folder catches the email and inspect the text formatting.
-
-### 2. Manual Skipped Gates
-
-If you review your sheet and notice an enterprise contact or company that you do not want to automatically draft for, simply type **`Skipped`** into their corresponding row in **Column I (Status)**. The code handles this explicitly and will instantly skip over the row without querying the AI network.
-
-### 3. Review & Dispatch Loop
-
-Open your **Gmail Drafts folder** on your screen side-by-side with your desktop portfolio.
-
-1. Quickly review the body text generated by the engine.
-2. Drop in your latest dynamic resume file.
-3. Verify spelling markers.
-4. Hit **Send**.
+1. **Select Targets:** Scroll through your spreadsheet and tick the checkboxes in **Column J** for the companies you want to contact today.
+2. **Execute:** Click **`🚀 Cold Email Engine`** > **`Generate Drafts for Ticked Rows`**.
+3. **Automated State Tracking:** The script will process the targeted rows, instantly draft them into your Gmail, set `Column I` to `Drafted`, and reset the checkboxes to `FALSE`.
+4. **Review & Dispatch:** Open your Gmail Drafts folder. Quickly review the copy, attach your latest PDF resume, and hit **Send**.

@@ -9,26 +9,27 @@ function onOpen() {
 }
 
 /**
- * Iterates through rows, validates checkbox states, processes context through the Gemini API, 
- * and moves results straight into your Gmail Drafts folder.
+ * Iterates through rows, validates checkbox states, parses external JSON resume context,
+ * processes the payload via Gemini API, and moves results into Gmail Drafts.
  */
 function processSelectedCheckboxes() {
     const API_KEY = "YOUR_GEMINI_API_KEY_HERE"; // <--- Insert your free Google AI Studio API Key
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
     const data = sheet.getDataRange().getValues();
 
-    // 1. SENDER IDENTITY & CREDIBILITY ANCHORS
-    const myBackground = `
-  Sender Name: Sujal Bhati
-  College/Identity Anchor: DTU (Delhi Technological University) / DU Alum Engineering Network
-  Target Roles: Software Engineering, AI/ML, Full-Stack, Hardware-Software Interdisciplinary Roles
-  Core Quantified Technical Pillars (Select exactly one relevant engineering anchor per email):
-  - Pillar A (Full-Stack/VPS): Built custom React frontends hosted on Vercel with Supabase backends; self-hosted and deployed complex enterprise ERPNext/Frappe CRM instances natively on VPS.
-  - Pillar B (Robotics/AI/ML): Junior Software Lead for Team Inferno DTU. Ran electrical & software subsystems using ROS frameworks to secure Rank 7 at the International Space Drone Challenge (ISDC).
-  - Pillar C (Cybersecurity/Ethical Hacking): Team Member at EHAX DTU (Ethical Hacking Society). Architected multi-stage CTF vulnerability challenges, OSINT analysis, and server security exploits.
-  `;
+    // DYNAMIC CONTEXT FETCH: Load and parse the separate Resume.json file
+    let myBackground;
+    try {
+        const rawJsonText = HtmlService.createHtmlOutputFromFile('Resume.json').getContent();
+        // Validate it's proper JSON before running the loop
+        const parsedResume = JSON.parse(rawJsonText);
+        myBackground = JSON.stringify(parsedResume, null, 2);
+    } catch (err) {
+        SpreadsheetApp.getUi().alert("Error: Could not read or parse Resume.json file. Make sure it contains valid JSON formatting.");
+        return;
+    }
 
-    // 2. STRUCTURAL WRITING RULES BLOCK
+    // THE COLD EMAIL MASTERY STRICT RULES BLOCK
     const emailRules = `
   You are an elite executive copywriter executing the Cold Mail Mastery Framework. Draft an explicit, ultra-short cold email that mirrors real human output.
   
@@ -36,7 +37,7 @@ function processSelectedCheckboxes() {
   1. THE HOOK: Stop them from closing the email. Open IMMEDIATELY with a sharp, specific observation about what their company does based on the Industry/Company Description. 
      * NEVER use conversational filler like "I hope this email finds you well", "My name is...", or "I am writing to express my interest". Start directly with the hook.
   2. THE CONNECTION: Link their company's core focus/engineering domain to an engineering challenge or niche you respect.
-  3. THE CONGRUENCE: Bring in EXACTLY ONE specific, quantified project result from the Sender Background that maps cleanly to their space. Do NOT dump multiple bullet points.
+  3. THE CONGRUENCE: Review the 'technical_pillars' block in the provided JSON context. Pick EXACTLY ONE specific, quantified project result from those pillars that maps cleanly to their tech space. Do NOT dump multiple pillars or list everything.
   4. THE ASK: A single, low-friction call to action asking for a brief 15-minute sync or a reply to look at a 60-second video demo.
   
   Tone, Style, & Formatting Constraints:
@@ -59,13 +60,13 @@ function processSelectedCheckboxes() {
         let status = data[i][8];             // Column I: Status
         let isChecked = data[i][9];          // Column J: Checkbox (True/False)
 
-        // Process matching criteria targets only
+        // Process checked matching targets only
         if (isChecked === true && recruiterEmail && status !== "Drafted") {
 
             const prompt = `
       Execute the Cold Mail Mastery framework to generate a raw cold outreach email draft.
       
-      Sender Background:
+      Sender Background (Parsed via JSON Context file):
       ${myBackground}
       
       Framework Constraints:
@@ -80,7 +81,7 @@ function processSelectedCheckboxes() {
       
       Output Requirements:
       Line 1 MUST be exactly in this format following the Function + Credibility Signal structure:
-      Subject: Application for [Specific Dev/Engineering] Role | DTU Engineering, [Mention the 1 specific asset you used like 'ISDC Rank 7' or 'Full-Stack Developer']
+      Subject: Application for [Specific Dev/Engineering] Role | DTU Engineering, [Mention the 1 specific asset you matched like 'ISDC Rank 7' or 'Full-Stack Developer']
       
       Line 2 onwards must be the email body text. End exactly at the final call to action sentence. No markdown formatting or bold markers.
       `;
@@ -111,13 +112,13 @@ function processSelectedCheckboxes() {
                     body = lines.slice(1).join('\n').trim();
                 }
 
-                // Formulate clear human sign-off block
+                // Formulate clear human sign-off block dynamically using parsed name data
                 body += `\n\nBest,\nSujal Bhati\nDelhi Technological University (DTU)\nlinkedin.com/sujalbhati`;
 
-                // Instantiate the message inside Gmail drafts
+                // Instantiate message inside Gmail drafts folder
                 GmailApp.createDraft(recruiterEmail, subject, body);
 
-                // Log status to prevent duplicates and uncheck execution block
+                // Update states
                 sheet.getRange(i + 1, 9).setValue("Drafted");
                 sheet.getRange(i + 1, 10).setValue(false);
                 SpreadsheetApp.flush();
@@ -135,10 +136,10 @@ function processSelectedCheckboxes() {
         }
     }
 
-    // Flash validation notifications inside sheet window UI
+    // Final notification alert
     if (processedCount > 0) {
         SpreadsheetApp.getUi().alert(`Success! Generated ${processedCount} personalized draft(s) inside your Gmail.`);
     } else {
-        SpreadsheetApp.getUi().alert("No rows were processed. Check that target checkboxes are active and the Status cell is blank.");
+        SpreadsheetApp.getUi().alert("No rows were processed. Check that checkboxes are active and Status cells are blank.");
     }
 }
