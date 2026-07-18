@@ -20,12 +20,15 @@ function processSelectedCheckboxes() {
     // DYNAMIC CONTEXT FETCH: Load and parse the separate Resume.json file
     let myBackground;
     try {
-        const rawJsonText = HtmlService.createHtmlOutputFromFile('Resume.json').getContent();
-        // Validate it's proper JSON before running the loop
+        let rawJsonText = HtmlService.createHtmlOutputFromFile('Resume.json').getContent();
+
+        // FIX: Clean invisible web formatting and non-breaking spaces that break JSON engines
+        rawJsonText = rawJsonText.replace(/\u00a0/g, ' ').replace(/&nbsp;/g, ' ').trim();
+
         const parsedResume = JSON.parse(rawJsonText);
         myBackground = JSON.stringify(parsedResume, null, 2);
     } catch (err) {
-        SpreadsheetApp.getUi().alert("Error: Could not read or parse Resume.json file. Make sure it contains valid JSON formatting.");
+        SpreadsheetApp.getUi().alert("Error: Could not read or parse Resume.json file. Make sure it contains valid JSON formatting. Detail: " + err.toString());
         return;
     }
 
@@ -37,7 +40,7 @@ function processSelectedCheckboxes() {
   1. THE HOOK: Stop them from closing the email. Open IMMEDIATELY with a sharp, specific observation about what their company does based on the Industry/Company Description. 
      * NEVER use conversational filler like "I hope this email finds you well", "My name is...", or "I am writing to express my interest". Start directly with the hook.
   2. THE CONNECTION: Link their company's core focus/engineering domain to an engineering challenge or niche you respect.
-  3. THE CONGRUENCE: Review the 'technical_pillars' block in the provided JSON context. Pick EXACTLY ONE specific, quantified project result from those pillars that maps cleanly to their tech space. Do NOT dump multiple pillars or list everything.
+  3. THE CONGRUENCE: Review the 'experience' and 'projects' blocks in the provided JSON context. Pick EXACTLY ONE specific, quantified project result or past internship highlight that maps cleanly to their tech space. Do NOT dump multiple elements or list everything.
   4. THE ASK: A single, low-friction call to action asking for a brief 15-minute sync or a reply to look at a 60-second video demo.
   
   Tone, Style, & Formatting Constraints:
@@ -112,7 +115,7 @@ function processSelectedCheckboxes() {
                     body = lines.slice(1).join('\n').trim();
                 }
 
-                // Formulate clear human sign-off block dynamically using parsed name data
+                // Formulate clear human sign-off block
                 body += `\n\nBest,\nSujal Bhati\nDelhi Technological University (DTU)\nlinkedin.com/sujalbhati`;
 
                 // Instantiate message inside Gmail drafts folder
