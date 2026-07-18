@@ -36,10 +36,10 @@ function processSelectedCheckboxes() {
         return;
     }
 
-    // DYNAMIC CONTEXT FETCH: Load and parse the separate Resume.json file
+    // DYNAMIC CONTEXT FETCH: Fixed reference path matching Apps Script's native engine naming
     let myBackground;
     try {
-        let rawJsonText = HtmlService.createHtmlOutputFromFile('Resume.json').getContent();
+        let rawJsonText = HtmlService.createHtmlOutputFromFile('Resume.json.html').getContent();
         rawJsonText = rawJsonText.replace(/\u00a0/g, ' ').replace(/&nbsp;/g, ' ').trim();
         const parsedResume = JSON.parse(rawJsonText);
         myBackground = JSON.stringify(parsedResume, null, 2);
@@ -107,7 +107,8 @@ function processSelectedCheckboxes() {
       Line 2 onwards must be the email body text. End exactly at the final call to action sentence. No markdown formatting or bold markers.
       `;
 
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
+            // CONFIGURATION ADJUSTMENT: Adjusted endpoint URL route directly to your model specification
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${API_KEY}`;
             const payload = {
                 "contents": [{ "parts": [{ "text": prompt }] }]
             };
