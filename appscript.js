@@ -3,61 +3,71 @@ function generateColdEmailDrafts() {
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
     const data = sheet.getDataRange().getValues();
 
-    // 1. YOUR RESUME BACKGROUND CONTEXT
+    // 1. SENDER BACKGROUND & CREDIBILITY SIGNALS (Function + Credibility Formula)
     const myBackground = `
   Sender Name: Sujal Bhati
-  Education: B.Tech in Electrical Engineering at Delhi Technological University (DTU).
-  Key Technical Experience: 
-  - Full-stack development: Building custom React frontends hosted on Vercel, backends with Supabase, and deploying self-hosted CRM/ERP instances (Frappe/ERPNext) on virtual private servers (VPS).
-  - Cybersecurity: Ethical hacking, organizing Capture The Flag (CTF) challenges, vulnerability analysis, and active society leadership.
-  - Robotics/Embedded Systems: Junior Software Lead for Team Inferno DTU (ROS frameworks, space drone electrical and software subsystems).
+  College/Identity Anchor: DTU (Delhi Technological University) / DU Alum Engineering Network
+  Target Roles: Software Engineering, AI/ML, Full-Stack, Hardware-Software Interdisciplinary Roles
+  Core Quantified Technical Pillars (Use 1 relevant pillar per email max):
+  - Pillar A (Full-Stack/VPS): Built custom React frontends hosted on Vercel with Supabase backends; self-hosted and deployed complex enterprise ERPNext/Frappe CRM instances natively on VPS.
+  - Pillar B (Robotics/AI/ML): Junior Software Lead for Team Inferno DTU. Ran electrical & software subsystems using ROS frameworks to secure Rank 7 at the International Space Drone Challenge (ISDC).
+  - Pillar C (Cybersecurity/Ethical Hacking): Team Member at EHAX DTU (Ethical Hacking Society). Architected multi-stage CTF vulnerability challenges, OSINT analysis, and server security exploits.
   `;
 
-    // 2. COLD EMAIL MASTERY PROMPT RULES
+    // 2. THE COLD EMAIL MASTERY STRICT RULES BLOCK
     const emailRules = `
-  - Write a punchy, hyper-targeted cold outreach email trying to secure a software engineering, AI/ML, or hardware/software internship or role.
-  - Keep the email incredibly short: 3 to 4 sentences maximum. No long blocks of text.
-  - Drop all formal AI fluff: NEVER use phrases like "I hope this email finds you well", "My name is...", "Dear Hiring Team", or "I am writing to express my interest".
-  - Jump directly into a highly specific observation about their company using the Industry or Company Description provided. Make it sound like an organic observation a sharp student noticed.
-  - Ground your relevance by naturally mentioning a piece of your background (e.g., building full-stack platforms on VPS, ROS frameworks, or security testing) that solves or complements what they do.
-  - Sound like an ambitious, skilled individual writing casually yet respectfully. Avoid overly corporate corporate buzzwords (e.g., 'delighted', 'synergy', 'testament', 'foster').
-  - End with a low-friction, single-sentence Call to Action (CTA) asking if they have 2 minutes for a brief chat or if you can drop over a 60-second video demonstrating your stack.
+  You are an elite ghostwriter executing the Cold Mail Mastery Framework. Write a cold email that feels like it was individually crafted by a human over 20 minutes.
+  
+  Follow the 4-Part Framework strictly:
+  1. THE HOOK: Stop them from closing the email. Open IMMEDIATELY with a sharp, specific observation about what their company does based on the Industry/Company Description. 
+     * NEVER use conversational filler like "I hope this email finds you well", "My name is...", or "I am writing to express my interest". Start directly with the hook.
+  2. THE CONNECTION: Show you understand their world. Link their company's core focus/engineering domain to an engineering challenge or niche you respect.
+  3. THE CONGRUENCE: Match yourself to them. Bring in EXACTLY ONE specific, quantified project result from the Sender Background (e.g., Rank 7 International Space Drone Challenge using ROS, or deploying full-stack systems on a VPS). Do NOT dump the whole resume.
+  4. THE ASK: A single, low-friction call to action. Ask for a brief 15-minute sync or a quick reply to look at a 60-second video clip of your technical stacks.
+  
+  Tone & Style Rules:
+  - Total length MUST be under 120-150 words (maximum 3-4 sentences total).
+  - Keep it crisp, conversational, and direct. 
+  - ZERO AI Buzzwords: Ban words like 'delighted', 'synergy', 'testament', 'foster', 'keen interest', 'esteemed organization', or 'pioneering'.
+  - Do not include signature placeholders like "[Your Name]". Stop generating text right at the call to action sentence.
   `;
 
-    // Start loop from index 1 to skip your header row (Row 1)
+    // Loop through rows starting at index 1 (skipping headers)
     for (let i = 1; i < data.length; i++) {
-        let recruiterName = data[i][1];      // Column B
-        let recruiterEmail = data[i][2];     // Column C
-        let recruiterTitle = data[i][3];     // Column D
-        let companyName = data[i][4];        // Column E
-        let industry = data[i][6];           // Column G
-        let companyDescription = data[i][7]; // Column H
-        let status = data[i][8];             // Column I (We use this for tracking)
+        let recruiterName = data[i][1];      // Column B: Name
+        let recruiterEmail = data[i][2];     // Column C: Email
+        let recruiterTitle = data[i][3];     // Column D: Title
+        let companyName = data[i][4];        // Column E: Company
+        let industry = data[i][6];           // Column G: Industry
+        let companyDescription = data[i][7]; // Column H: Company Description
+        let status = data[i][8];             // Column I: Status (Tracking column)
 
-        // Only process if there's an email and status isn't already marked "Drafted"
+        // Process only if Email exists and hasn't been drafted yet
         if (recruiterEmail && status !== "Drafted" && status !== "Skipped") {
 
             const prompt = `
-      You are an expert executive copywriter. Draft a short, razor-sharp cold email based on these raw details.
+      Execute the Cold Mail Mastery guide to generate a raw cold outreach email draft.
       
-      Sender Context:
+      Sender Background:
       ${myBackground}
       
-      Structural Framework Constraints:
+      Framework Constraints:
       ${emailRules}
       
-      Recipient Information:
-      - Name: ${recruiterName} (Title: ${recruiterTitle})
+      Recipient Details:
+      - Recruiter/Executive Name: ${recruiterName}
+      - Title: ${recruiterTitle}
       - Company Name: ${companyName}
       - Industry: ${industry}
-      - What the Company Does: ${companyDescription}
+      - Company Profile: ${companyDescription}
       
-      Output format requirement: 
-      Line 1 must be exactly: Subject: [Your compelling, brief subject line here]
-      Line 2 onwards must be the email body. Do not include any signature block placeholders (like [Your Name]). End directly at the call to action sentence. No markdown formatting or bold markers.
+      Output Requirements:
+      Line 1 MUST be exactly in this format following the Function + Credibility Signal structure from the guide:
+      Subject: Application for [Specific Dev/Engineering] Role | DTU Engineering, [Mention the 1 specific asset you used like 'ISDC Rank 7' or 'Full-Stack Developer']
+      
+      Line 2 onwards must be the email body text. End exactly at the final call to action sentence. No markdown formatting or bold markers.
       `;
 
-            // Hit the Gemini 2.5 Flash free tier endpoint
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
             const payload = {
                 "contents": [{ "parts": [{ "text": prompt }] }]
@@ -73,16 +83,10 @@ function generateColdEmailDrafts() {
             try {
                 const response = UrlFetchApp.fetch(url, options);
                 const json = JSON.parse(response.getContentText());
-
-                if (!json.candidates || json.candidates.length === 0) {
-                    throw new Error("No response generated by the model. Check rate limits.");
-                }
-
                 const aiResponse = json.candidates[0].content.parts[0].text;
 
-                // Parse the generated text into subject and body variables
                 let lines = aiResponse.split('\n');
-                let subject = `Quick question regarding ${companyName}`;
+                let subject = `Software Role | DTU Electrical Engineering`;
                 let body = aiResponse;
 
                 if (lines[0].toLowerCase().startsWith("subject:")) {
@@ -90,23 +94,23 @@ function generateColdEmailDrafts() {
                     body = lines.slice(1).join('\n').trim();
                 }
 
-                // Sign off cleanly with your name
-                body += "\n\nBest,\nSujal Bhati";
+                // Clean signature addition
+                body += `\n\nBest,\nSujal Bhati\nDelhi Technological University (DTU)\nlinkedin.com/sujalbhati`;
 
-                // Create the draft dynamically inside your Gmail
+                // Push straight to your Gmail Drafts
                 GmailApp.createDraft(recruiterEmail, subject, body);
 
-                // Mark column I as Drafted so it skips this row next time you press run
+                // Mark row as complete
                 sheet.getRange(i + 1, 9).setValue("Drafted");
                 SpreadsheetApp.flush();
 
             } catch (e) {
-                Logger.log("Error processing row " + (i + 1) + ": " + e.toString());
+                Logger.log("Failed on row " + (i + 1) + ": " + e.toString());
                 sheet.getRange(i + 1, 9).setValue("Error");
                 SpreadsheetApp.flush();
             }
 
-            // 2-second timeout to avoid hammering the free API tier rate limits
+            // Safety pause for free tier rate compliance
             Utilities.sleep(2000);
         }
     }
