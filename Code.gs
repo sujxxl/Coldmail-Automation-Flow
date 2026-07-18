@@ -36,7 +36,7 @@ function processSelectedCheckboxes() {
         return;
     }
 
-    // DYNAMIC CONTEXT FETCH: Fixed reference path matching Apps Script's native engine naming
+    // DYNAMIC CONTEXT FETCH: Load and parse the separate Resume.json file
     let myBackground;
     try {
         let rawJsonText = HtmlService.createHtmlOutputFromFile('Resume.json.html').getContent();
@@ -54,16 +54,21 @@ function processSelectedCheckboxes() {
   
   Enforce the 4-Part Framework rules strictly:
   1. THE HOOK: Stop them from closing the email. Open IMMEDIATELY with a sharp, specific observation about what their company does based on the Industry/Company Description. 
+     * CRITICAL FILTER AGAINST BIO-DUMPING: Do NOT copy-paste or regurgitate their generic company summary description. Instead, pick ONE specific action, engineering product, or core solution they build and speak casually about how they approach it.
      * NEVER use conversational filler like "I hope this email finds you well", "My name is...", or "I am writing to express my interest". Start directly with the hook.
   2. THE CONNECTION: Link their company's core focus/engineering domain to an engineering challenge or niche you respect.
-  3. THE CONGRUENCE: Review the 'experience' and 'projects' blocks in the provided JSON context. Pick EXACTLY ONE specific, quantified project result or past internship highlight that maps cleanly to their tech space. Do NOT dump multiple elements or list everything.
+  3. THE CONGRUENCE (CONTEXT MATCHING RULE): Review the provided JSON background context. Look at the target company's description and dynamically pick EXACTLY ONE technical pillar based on this smart matching matrix:
+     * If they focus on web development, software platforms, database design, backend architecture, CRM, or SaaS: Highlight the "Elgrace Talents Platform & Systems Full-Stack Web App" or "CampusLink/Aviksoft" internship experience.
+     * If they focus on AI, ML, computer vision, data analytics, prediction, or anomalies: Highlight "AntiDOPE.ai" or the "Autonomous Waypoint Guidance System (YOLOv11s)".
+     * If they focus on hardware, robotics, drones, aerospace, embedded systems, or control systems: Highlight "Rank 7 ISDC 2025" with Team Inferno DTU.
+     * Drop all other irrelevant experiences. Do NOT dump multiple elements or list everything.
   4. THE ASK: A single, low-friction call to action asking for a brief 15-minute sync or a reply to look at a 60-second video demo.
   
-  Tone, Style, & Formatting Constraints:
-  - Total length MUST be under 120-150 words (maximum 3-4 sentences total).
+  Tone, Style, & Mobile Density Constraints:
+  - Total length MUST be under 100-120 words (maximum 3-4 sentences total).
+  - MOBILE VISUAL DENSITY RULE: Break sentences into clean, standalone lines or dual-sentence small blocks. Avoid massive blocks of text that look heavy on mobile viewports.
   - Keep it crisp, conversational, and direct. 
   - ZERO AI Buzzwords: Ban words like 'delighted', 'synergy', 'testament', 'foster', 'keen interest', 'esteemed organization', or 'pioneering'.
-  - Stop text generation immediately at the final call to action sentence. Do not include signature blocks.
   `;
 
     let processedCount = 0;
@@ -74,18 +79,26 @@ function processSelectedCheckboxes() {
         let status = data[i][colIndex.status];
         let recruiterEmail = data[i][colIndex.email];
 
-        // Safely fallback indices for columns that might be completely omitted blank
-        let recruiterName = colIndex.name !== -1 ? data[i][colIndex.name] : "Hiring Team";
+        let recruiterName = colIndex.name !== -1 ? data[i][colIndex.name] : "Team";
         let recruiterTitle = colIndex.title !== -1 ? data[i][colIndex.title] : "Executive";
         let companyName = data[i][colIndex.company];
         let industry = colIndex.industry !== -1 ? data[i][colIndex.industry] : "Tech Sector";
-        let companyDescription = colIndex.description !== -1 ? data[i][colIndex.description] : "";
+        let companyDescription = data[i][colIndex.description !== -1 ? data[i][colIndex.description] : ""];
+
+        // Clean up name fields safely
+        let cleanedFirstName = String(recruiterName).split(' ')[0].trim();
+        let greetingPrefix = "";
+        if (!cleanedFirstName || cleanedFirstName.toLowerCase() === "team" || cleanedFirstName.toLowerCase() === "hiring") {
+            greetingPrefix = "Hi there";
+        } else {
+            greetingPrefix = "Hi " + cleanedFirstName;
+        }
 
         // Process checked matching targets only
         if (isChecked === true && recruiterEmail && status !== "Drafted") {
 
             const prompt = `
-      Execute the Cold Mail Mastery framework to generate a raw cold outreach email draft.
+      Generate a raw cold outreach email draft following this exact structural instruction set.
       
       Sender Background (Parsed via JSON Context file):
       ${myBackground}
@@ -94,20 +107,22 @@ function processSelectedCheckboxes() {
       ${emailRules}
       
       Recipient Details:
-      - Recruiter/Executive Name: ${recruiterName}
       - Title: ${recruiterTitle}
       - Company Name: ${companyName}
       - Industry: ${industry}
       - Company Profile: ${companyDescription}
       
-      Output Requirements:
-      Line 1 MUST be exactly in this format following the Function + Credibility Signal structure:
-      Subject: Application for [Specific Dev/Engineering] Role | DTU Engineering, [Mention the 1 specific asset you matched like 'ISDC Rank 7' or 'Full-Stack Developer']
-      
-      Line 2 onwards must be the email body text. End exactly at the final call to action sentence. No markdown formatting or bold markers.
+      STRICT OUTPUT FORMAT PATTERN REQUIRED:
+      You must wrap the components inside absolute explicit structural tokens. Do not use any markdown bolding, backticks, or asterisks. Return your text formatted precisely like this:
+
+      [SUBJECT_START]
+      Application for [Specific Role] Role | DTU Engineering, [Mention the 1 matched key credibility signal asset here]
+      [SUBJECT_END]
+      [BODY_START]
+      [Start your body directly with the hook sentence here. Do NOT include greetings like "Hi" or sign-offs like "Best, Sujal" inside this token block.]
+      [BODY_END]
       `;
 
-            // CONFIGURATION ADJUSTMENT: Adjusted endpoint URL route directly to your model specification
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${API_KEY}`;
             const payload = {
                 "contents": [{ "parts": [{ "text": prompt }] }]
@@ -130,22 +145,31 @@ function processSelectedCheckboxes() {
                     throw new Error("Gemini API Error Response: " + responseText);
                 }
 
-                const aiResponse = json.candidates[0].content.parts[0].text;
+                const aiResponse = json.candidates[0].content.parts[0].text.trim();
 
-                let lines = aiResponse.split('\n');
+                // SECURE TEXT ISOLATION EXTRACTION VIA REGEX TOKENS
+                let subjectMatch = aiResponse.match(/\[SUBJECT_START\]([\s\S]*?)\[SUBJECT_END\]/);
+                let bodyMatch = aiResponse.match(/\[BODY_START\]([\s\S]*?)\[BODY_END\]/);
+
                 let subject = `Software Role | DTU Electrical Engineering`;
-                let body = aiResponse;
+                let emailBody = "";
 
-                if (lines[0].toLowerCase().startsWith("subject:")) {
-                    subject = lines[0].replace(/subject:/i, "").trim();
-                    body = lines.slice(1).join('\n').trim();
+                if (subjectMatch && subjectMatch[1]) {
+                    subject = subjectMatch[1].trim();
+                }
+                if (bodyMatch && bodyMatch[1]) {
+                    emailBody = bodyMatch[1].trim();
+                } else {
+                    // Robust raw fallback in case tokens fail compilation
+                    emailBody = aiResponse.replace(/\[.*?\]/g, "").trim();
                 }
 
-                // Formulate clear human sign-off block
-                body += `\n\nBest,\nSujal Bhati\nDelhi Technological University (DTU)\nlinkedin.com/sujalbhati`;
+                // SYSTEM CONCATENATION PROCESS (Guarantees zero double greetings or typos)
+                let structuredBody = greetingPrefix + ",\n\n" + emailBody;
+                structuredBody += `\n\nBest,\nSujal Bhati\nDelhi Technological University (DTU)\nlinkedin.com/sujalbhati`;
 
                 // Instantiate message inside Gmail drafts folder
-                GmailApp.createDraft(recruiterEmail, subject, body);
+                GmailApp.createDraft(recruiterEmail, subject, structuredBody);
 
                 // Update states dynamically by tracked indexes
                 sheet.getRange(i + 1, colIndex.status + 1).setValue("Drafted");
