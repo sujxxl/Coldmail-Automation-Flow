@@ -1,53 +1,63 @@
 function generateColdEmailDrafts() {
-    const API_KEY = "YOUR_GEMINI_API_KEY_HERE"; // <--- Put your API key here
+    const API_KEY = "YOUR_GEMINI_API_KEY_HERE"; // <--- Put your free Gemini API key here
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
     const data = sheet.getDataRange().getValues();
 
-    // 1. INPUT YOUR FIXED RESUME BACKGROUND CONTEXT HERE
+    // 1. YOUR RESUME BACKGROUND CONTEXT
     const myBackground = `
-  Name: Sujal Bhati
+  Sender Name: Sujal Bhati
   Education: B.Tech in Electrical Engineering at Delhi Technological University (DTU).
-  Key Skills/Exp: Full-stack dev (React, Supabase, Frappe/ERPNext), Cybersecurity (CTFs, ethical hacking), Robotics (ROS, Junior Software Lead for Team Inferno DTU space drone team).
+  Key Technical Experience: 
+  - Full-stack development: Building custom React frontends hosted on Vercel, backends with Supabase, and deploying self-hosted CRM/ERP instances (Frappe/ERPNext) on virtual private servers (VPS).
+  - Cybersecurity: Ethical hacking, organizing Capture The Flag (CTF) challenges, vulnerability analysis, and active society leadership.
+  - Robotics/Embedded Systems: Junior Software Lead for Team Inferno DTU (ROS frameworks, space drone electrical and software subsystems).
   `;
 
-    // 2. INPUT THE COLD EMAIL MASTERY RULES HERE
+    // 2. COLD EMAIL MASTERY PROMPT RULES
     const emailRules = `
-  - Keep the total email length under 4 sentences.
-  - Never start with conversational filler like "I hope this email finds you well" or "My name is...".
-  - Open directly with the personalized company hook/research provided.
-  - Make it sound brief, human, casual yet respectful, and completely organic. No AI buzzwords like 'delighted', 'synergy', 'testament', or 'foster'.
-  - Conclude with a low-friction call to action asking if they have 2 minutes next week or if you can send over a 60-second video of your work.
+  - Write a punchy, hyper-targeted cold outreach email trying to secure a software engineering, AI/ML, or hardware/software internship or role.
+  - Keep the email incredibly short: 3 to 4 sentences maximum. No long blocks of text.
+  - Drop all formal AI fluff: NEVER use phrases like "I hope this email finds you well", "My name is...", "Dear Hiring Team", or "I am writing to express my interest".
+  - Jump directly into a highly specific observation about their company using the Industry or Company Description provided. Make it sound like an organic observation a sharp student noticed.
+  - Ground your relevance by naturally mentioning a piece of your background (e.g., building full-stack platforms on VPS, ROS frameworks, or security testing) that solves or complements what they do.
+  - Sound like an ambitious, skilled individual writing casually yet respectfully. Avoid overly corporate corporate buzzwords (e.g., 'delighted', 'synergy', 'testament', 'foster').
+  - End with a low-friction, single-sentence Call to Action (CTA) asking if they have 2 minutes for a brief chat or if you can drop over a 60-second video demonstrating your stack.
   `;
 
-    // Loop through rows (skip header row 0)
+    // Start loop from index 1 to skip your header row (Row 1)
     for (let i = 1; i < data.length; i++) {
-        let recruiterName = data[i][0];
-        let recruiterEmail = data[i][1];
-        let companyName = data[i][2];
-        let companyHook = data[i][3];
-        let status = data[i][4];
+        let recruiterName = data[i][1];      // Column B
+        let recruiterEmail = data[i][2];     // Column C
+        let recruiterTitle = data[i][3];     // Column D
+        let companyName = data[i][4];        // Column E
+        let industry = data[i][6];           // Column G
+        let companyDescription = data[i][7]; // Column H
+        let status = data[i][8];             // Column I (We use this for tracking)
 
-        // Only process if email exists and status isn't already "Drafted"
-        if (recruiterEmail && status !== "Drafted") {
+        // Only process if there's an email and status isn't already marked "Drafted"
+        if (recruiterEmail && status !== "Drafted" && status !== "Skipped") {
 
             const prompt = `
-      You are an expert ghostwriter. Write a highly personalized, short cold email to a recruiter based on these details.
+      You are an expert executive copywriter. Draft a short, razor-sharp cold email based on these raw details.
       
-      Sender Background:
+      Sender Context:
       ${myBackground}
       
-      Strict Writing Rules to Follow:
+      Structural Framework Constraints:
       ${emailRules}
       
-      Recipient Details:
-      - Recruiter Name: ${recruiterName}
+      Recipient Information:
+      - Name: ${recruiterName} (Title: ${recruiterTitle})
       - Company Name: ${companyName}
-      - Specific Company Context/Research Hook: ${companyHook}
+      - Industry: ${industry}
+      - What the Company Does: ${companyDescription}
       
-      Output ONLY the draft in raw text. Separate the Subject Line and the Body clearly. No markdown formatting.
+      Output format requirement: 
+      Line 1 must be exactly: Subject: [Your compelling, brief subject line here]
+      Line 2 onwards must be the email body. Do not include any signature block placeholders (like [Your Name]). End directly at the call to action sentence. No markdown formatting or bold markers.
       `;
 
-            // Call Gemini API (using flash model for speed and free tier compatibility)
+            // Hit the Gemini 2.5 Flash free tier endpoint
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
             const payload = {
                 "contents": [{ "parts": [{ "text": prompt }] }]
@@ -63,31 +73,40 @@ function generateColdEmailDrafts() {
             try {
                 const response = UrlFetchApp.fetch(url, options);
                 const json = JSON.parse(response.getContentText());
+
+                if (!json.candidates || json.candidates.length === 0) {
+                    throw new Error("No response generated by the model. Check rate limits.");
+                }
+
                 const aiResponse = json.candidates[0].content.parts[0].text;
 
-                // Parse Subject and Body from AI response
+                // Parse the generated text into subject and body variables
                 let lines = aiResponse.split('\n');
-                let subject = "Quick question regarding " + companyName;
+                let subject = `Quick question regarding ${companyName}`;
                 let body = aiResponse;
 
-                if (lines[0].toLowerCase().includes("subject:")) {
+                if (lines[0].toLowerCase().startsWith("subject:")) {
                     subject = lines[0].replace(/subject:/i, "").trim();
                     body = lines.slice(1).join('\n').trim();
                 }
 
-                // Create the Draft in your Gmail account
+                // Sign off cleanly with your name
+                body += "\n\nBest,\nSujal Bhati";
+
+                // Create the draft dynamically inside your Gmail
                 GmailApp.createDraft(recruiterEmail, subject, body);
 
-                // Update the spreadsheet status
-                sheet.getRange(i + 1, 5).setValue("Drafted");
-                SpreadsheetApp.flush(); // Update sheet in real-time
+                // Mark column I as Drafted so it skips this row next time you press run
+                sheet.getRange(i + 1, 9).setValue("Drafted");
+                SpreadsheetApp.flush();
 
             } catch (e) {
                 Logger.log("Error processing row " + (i + 1) + ": " + e.toString());
-                sheet.getRange(i + 1, 5).setValue("Error");
+                sheet.getRange(i + 1, 9).setValue("Error");
+                SpreadsheetApp.flush();
             }
 
-            // Small pause to stay safely inside free tier rate limits
+            // 2-second timeout to avoid hammering the free API tier rate limits
             Utilities.sleep(2000);
         }
     }
