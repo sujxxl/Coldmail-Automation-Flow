@@ -9,26 +9,42 @@ function onOpen() {
 }
 
 /**
- * Iterates through rows, validates checkbox states, parses external JSON resume context,
- * processes the payload via Gemini API, and moves results into Gmail Drafts.
+ * Iterates through rows, maps headers dynamically, validates checkbox states, 
+ * parses external JSON resume context, processes payloads via Gemini API, and updates states.
  */
 function processSelectedCheckboxes() {
     const API_KEY = "YOUR_GEMINI_API_KEY_HERE"; // <--- Insert your free Google AI Studio API Key
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
     const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+
+    // Dynamic header position lookup map
+    const colIndex = {
+        name: headers.findIndex(h => String(h).trim().toLowerCase() === 'name'),
+        email: headers.findIndex(h => String(h).trim().toLowerCase() === 'email'),
+        title: headers.findIndex(h => String(h).trim().toLowerCase() === 'title'),
+        company: headers.findIndex(h => String(h).trim().toLowerCase() === 'company'),
+        industry: headers.findIndex(h => String(h).trim().toLowerCase() === 'industry'),
+        description: headers.findIndex(h => String(h).trim().toLowerCase() === 'company description'),
+        status: headers.findIndex(h => String(h).trim().toLowerCase() === 'status'),
+        checkbox: headers.findIndex(h => String(h).trim().toLowerCase() === 'draft now')
+    };
+
+    // Guard clause checking for structural spreadsheet configurations
+    if (colIndex.email === -1 || colIndex.company === -1 || colIndex.status === -1 || colIndex.checkbox === -1) {
+        SpreadsheetApp.getUi().alert("Error: Critical column headers missing! Ensure your sheet has 'Email', 'Company', 'Status', and 'Draft Now' spelled exactly correctly in Row 1.");
+        return;
+    }
 
     // DYNAMIC CONTEXT FETCH: Load and parse the separate Resume.json file
     let myBackground;
     try {
         let rawJsonText = HtmlService.createHtmlOutputFromFile('Resume.json').getContent();
-
-        // FIX: Clean invisible web formatting and non-breaking spaces that break JSON engines
         rawJsonText = rawJsonText.replace(/\u00a0/g, ' ').replace(/&nbsp;/g, ' ').trim();
-
         const parsedResume = JSON.parse(rawJsonText);
         myBackground = JSON.stringify(parsedResume, null, 2);
     } catch (err) {
-        SpreadsheetApp.getUi().alert("Error: Could not read or parse Resume.json file. Make sure it contains valid JSON formatting. Detail: " + err.toString());
+        SpreadsheetApp.getUi().alert("Error: Could not read or parse Resume.json file. Detail: " + err.toString());
         return;
     }
 
@@ -54,14 +70,16 @@ function processSelectedCheckboxes() {
 
     // Row looping starts at Index 1 to skip column headers
     for (let i = 1; i < data.length; i++) {
-        let recruiterName = data[i][1];      // Column B: Name
-        let recruiterEmail = data[i][2];     // Column C: Email
-        let recruiterTitle = data[i][3];     // Column D: Title
-        let companyName = data[i][4];        // Column E: Company
-        let industry = data[i][6];           // Column G: Industry
-        let companyDescription = data[i][7]; // Column H: Company Description
-        let status = data[i][8];             // Column I: Status
-        let isChecked = data[i][9];          // Column J: Checkbox (True/False)
+        let isChecked = data[i][colIndex.checkbox];
+        let status = data[i][colIndex.status];
+        let recruiterEmail = data[i][colIndex.email];
+
+        // Safely fallback indices for columns that might be completely omitted blank
+        let recruiterName = colIndex.name !== -1 ? data[i][colIndex.name] : "Hiring Team";
+        let recruiterTitle = colIndex.title !== -1 ? data[i][colIndex.title] : "Executive";
+        let companyName = data[i][colIndex.company];
+        let industry = colIndex.industry !== -1 ? data[i][colIndex.industry] : "Tech Sector";
+        let companyDescription = colIndex.description !== -1 ? data[i][colIndex.description] : "";
 
         // Process checked matching targets only
         if (isChecked === true && recruiterEmail && status !== "Drafted") {
@@ -103,11 +121,12 @@ function processSelectedCheckboxes() {
 
             try {
                 const response = UrlFetchApp.fetch(url, options);
-                const json = JSON.parse(response.getContentText());
+                const responseCode = response.getResponseCode();
+                const responseText = response.getContentText();
+                const json = JSON.parse(responseText);
 
-                // CRITICAL SAFETY SHIELD: Validate the response contains structural content data
-                if (!json.candidates || json.candidates.length === 0 || !json.candidates[0].content || !json.candidates[0].content.parts) {
-                    throw new Error("API returned an empty response. This can happen if the company profile text triggers standard API safety filters, or the API key is incorrect.");
+                if (responseCode !== 200 || !json.candidates || json.candidates.length === 0 || !json.candidates[0].content) {
+                    throw new Error("Gemini API Error Response: " + responseText);
                 }
 
                 const aiResponse = json.candidates[0].content.parts[0].text;
@@ -127,16 +146,16 @@ function processSelectedCheckboxes() {
                 // Instantiate message inside Gmail drafts folder
                 GmailApp.createDraft(recruiterEmail, subject, body);
 
-                // Update states
-                sheet.getRange(i + 1, 9).setValue("Drafted");
-                sheet.getRange(i + 1, 10).setValue(false);
+                // Update states dynamically by tracked indexes
+                sheet.getRange(i + 1, colIndex.status + 1).setValue("Drafted");
+                sheet.getRange(i + 1, colIndex.checkbox + 1).setValue(false);
                 SpreadsheetApp.flush();
                 processedCount++;
 
             } catch (e) {
                 Logger.log("Failed execution processing index row " + (i + 1) + ": " + e.toString());
-                sheet.getRange(i + 1, 9).setValue("Error");
-                sheet.getRange(i + 1, 10).setValue(false);
+                sheet.getRange(i + 1, colIndex.status + 1).setValue("Error");
+                sheet.getRange(i + 1, colIndex.checkbox + 1).setValue(false);
                 SpreadsheetApp.flush();
             }
 
