@@ -104,6 +104,12 @@ function processSelectedCheckboxes() {
             try {
                 const response = UrlFetchApp.fetch(url, options);
                 const json = JSON.parse(response.getContentText());
+
+                // CRITICAL SAFETY SHIELD: Validate the response contains structural content data
+                if (!json.candidates || json.candidates.length === 0 || !json.candidates[0].content || !json.candidates[0].content.parts) {
+                    throw new Error("API returned an empty response. This can happen if the company profile text triggers standard API safety filters, or the API key is incorrect.");
+                }
+
                 const aiResponse = json.candidates[0].content.parts[0].text;
 
                 let lines = aiResponse.split('\n');
