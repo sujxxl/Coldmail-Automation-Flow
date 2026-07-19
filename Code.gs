@@ -10,10 +10,19 @@ function onOpen() {
 
 /**
  * Iterates through rows, maps headers dynamically, validates checkbox states, 
- * parses external JSON resume context, processes payloads via Gemini 3.1 Flash Lite API, and updates states.
+ * parses external JSON resume context, attaches a native PDF from Google Drive,
+ * processes payloads via Gemini 3.1 Flash Lite API, and updates states.
  */
 function processSelectedCheckboxes() {
   const API_KEY = "YOUR_GEMINI_API_KEY_HERE"; // <--- Insert your free Google AI Studio API Key
+  
+  // ==========================================
+  // 💾 GOOGLE DRIVE RESUME CONFIGURATION
+  // ==========================================
+  // Open Google Drive, right-click your Resume PDF -> Get Link.
+  // The long string of random characters between '/d/' and '/view' is your File ID.
+  const RESUME_FILE_ID = "YOUR_GOOGLE_DRIVE_FILE_ID_HERE"; // <--- Insert your Resume File ID here
+  
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   const data = sheet.getDataRange().getValues();
   const headers = data[0];
@@ -33,6 +42,15 @@ function processSelectedCheckboxes() {
   // Guard clause checking for structural spreadsheet configurations
   if (colIndex.email === -1 || colIndex.company === -1 || colIndex.status === -1 || colIndex.checkbox === -1) {
     SpreadsheetApp.getUi().alert("Error: Critical column headers missing! Ensure your sheet has 'Email', 'Company', 'Status', and 'Draft Now' spelled exactly correctly in Row 1.");
+    return;
+  }
+  
+  // Fetch your physical PDF blob from Google Drive safely
+  let resumeBlob;
+  try {
+    resumeBlob = DriveApp.getFileById(RESUME_FILE_ID).getBlob();
+  } catch (err) {
+    SpreadsheetApp.getUi().alert("Error: Could not access your Resume PDF from Google Drive. Verify your RESUME_FILE_ID is correct.");
     return;
   }
   
@@ -130,7 +148,6 @@ function processSelectedCheckboxes() {
       [BODY_END]
       `;
       
-      // UPGRADED TO THE EXPLICIT GEMINI 3.1 FLASH LITE ROUTE STRINGS
       const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${API_KEY}`;
       const payload = {
         "contents": [{ "parts": [{ "text": prompt }] }]
@@ -175,8 +192,13 @@ function processSelectedCheckboxes() {
         let structuredBody = greetingPrefix + ",\n\n" + emailBody;
         structuredBody += `\n\nBest,\nSujal Bhati\nDelhi Technological University (DTU)\nlinkedin.com/sujalbhati`;
         
-        // Instantiate message inside Gmail drafts folder
-        GmailApp.createDraft(recruiterEmail, subject, structuredBody);
+        // ==========================================
+        // 📎 NATIVE DRAFT INJECTION EXTRACTION
+        // ==========================================
+        // We compile the draft package parameters to pass the native file binary structure seamlessly
+        GmailApp.createDraft(recruiterEmail, subject, structuredBody, {
+          attachments: [resumeBlob]
+        });
         
         // Update states dynamically by tracked indexes
         sheet.getRange(i + 1, colIndex.status + 1).setValue("Drafted");
@@ -191,14 +213,13 @@ function processSelectedCheckboxes() {
         SpreadsheetApp.flush();
       }
       
-      // Speed optimized: 2 seconds delay keeps us completely safe and moving fast
       Utilities.sleep(2000); 
     }
   }
 
   // Final notification alert
   if (processedCount > 0) {
-    SpreadsheetApp.getUi().alert(`Success! Generated ${processedCount} personalized draft(s) inside your Gmail.`);
+    SpreadsheetApp.getUi().alert(`Success! Generated ${processedCount} personalized draft(s) with your Resume attached inside your Gmail.`);
   } else {
     SpreadsheetApp.getUi().alert("No rows were processed. Check that checkboxes are active and Status cells are blank.");
   }
