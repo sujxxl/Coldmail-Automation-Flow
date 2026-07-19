@@ -10,7 +10,7 @@ function onOpen() {
 
 /**
  * Iterates through rows, maps headers dynamically, validates checkbox states, 
- * parses external JSON resume context, processes payloads via Gemini API, and updates states.
+ * parses external JSON resume context, processes payloads via Gemini 3.1 Flash Lite API, and updates states.
  */
 function processSelectedCheckboxes() {
   const API_KEY = "YOUR_GEMINI_API_KEY_HERE"; // <--- Insert your free Google AI Studio API Key
@@ -130,7 +130,8 @@ function processSelectedCheckboxes() {
       [BODY_END]
       `;
       
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${API_KEY}`;
+      // UPGRADED TO THE EXPLICIT GEMINI 3.1 FLASH LITE ROUTE STRINGS
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${API_KEY}`;
       const payload = {
         "contents": [{ "parts": [{ "text": prompt }] }]
       };
@@ -170,7 +171,7 @@ function processSelectedCheckboxes() {
           emailBody = aiResponse.replace(/\[.*?\]/g, "").trim();
         }
         
-        // SYSTEM CONCATENATION PROCESS (Assembles the clean blocks smoothly)
+        // SYSTEM CONCATENATION PROCESS
         let structuredBody = greetingPrefix + ",\n\n" + emailBody;
         structuredBody += `\n\nBest,\nSujal Bhati\nDelhi Technological University (DTU)\nlinkedin.com/sujalbhati`;
         
@@ -190,7 +191,7 @@ function processSelectedCheckboxes() {
         SpreadsheetApp.flush();
       }
       
-      // Delay block to protect your free-tier token allocation
+      // Speed optimized: 2 seconds delay keeps us completely safe and moving fast
       Utilities.sleep(2000); 
     }
   }
